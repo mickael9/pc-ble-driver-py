@@ -7,3 +7,35 @@ exclude = [
     "__pycache__",
     "lib"
 ]
+
+[tool.cibuildwheel]
+build = [
+    "cp311-manylinux_x86_64",
+    "cp311-manylinux_aarch64",
+    "cp311-macosx_universal2",
+    "cp311-win_amd64",
+]
+
+before-build = [
+    "cd pc-ble-driver",
+    "cmake . -B build -DCMAKE_BUILD_TYPE=Release -DDISABLE_TESTS=1 -DDISABLE_EXAMPLES=1 -DNRF_BLE_DRIVER_VERSION=$NRF_BLE_DRIVER_VERSION",
+    "cmake --build build",
+    "cmake --install build",
+]
+
+[tool.cibuildwheel.environment]
+VCPKG_FORCE_SYSTEM_BINARIES = 1   # Required for aarch64 builds
+VCPKG_ROOT = "$(pwd)/vcpkg"
+NRF_BLE_DRIVER_VERSION = "4.1.100"
+
+[tool.cibuildwheel.linux]
+before-all = [
+    "ulimit -n 1024000", # Makes yum faster: https://github.com/docker/buildx/issues/379
+    "yum install -y zip systemd-devel",
+    "python -m pip install cmake ninja",
+    "git clone https://github.com/microsoft/vcpkg.git",
+    "./vcpkg/bootstrap-vcpkg.sh",
+    "./vcpkg/vcpkg install spdlog asio",
+]
+
+[tool.cibuildwheel.macos]
