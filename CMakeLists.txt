@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.20)
 
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
@@ -6,6 +6,12 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 endif()
 # Name of the project
 project (pc-ble-driver-py)
+if(WIN32)
+    # Hack for building with Python limited API
+    # scikit-build links with python3x.lib, but setting PY_LIMITED_API will request python3.lib through a #pragma comment(lib,"python3.lib") in pyconfig.h
+    # since only the .lib path is passed (and not a library search dir), the build will fail because the linker won't know where to find python3.lib
+    cmake_path(REPLACE_FILENAME PYTHON_LIBRARY python3.lib)
+endif()
 # PYTHON_LIBRARY is changed by the PythonExtensions package, so a different variable is required to keep the original user flag
 set(PYTHON_LIBRARY_FROM_USER_FLAGS "${PYTHON_LIBRARY}")
 # Use non-debug version of python, even when building a debug version 
@@ -40,7 +46,7 @@ set(NRF_BLE_DRIVER_VERSION "4.1.100")
 set(SD_API_VERS "2;5")
 
 # SWIG
-find_package(SWIG REQUIRED)
+find_package(SWIG 4.2.0 REQUIRED)
 include(${SWIG_USE_FILE})
 
 # nrf-ble-driver
