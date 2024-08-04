@@ -12,13 +12,9 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ ubuntu-20.04, macos-latest, windows-2019 ]
-        python-version: [ '3.8', '3.9', '3.10', '3.11' ]
+        os: [ ubuntu-20.04, macos-13, windows-2019 ]
+        python-version: [ '3.10', '3.11' ]
         include:
-          - python-version: '3.8'
-            toxpy: py38
-          - python-version: '3.9'
-            toxpy: py39
           - python-version: '3.10'
             toxpy: py310
           - python-version: '3.11'
@@ -27,12 +23,12 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         path: pc-ble-driver-py
 
     - name: Checkout pc-ble-driver
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: NordicSemiconductor/pc-ble-driver
         ref: c0ffd419053e2405fffdb02ce7f1f9acceff4a66
@@ -40,16 +36,11 @@ jobs:
 
     - name: Install linux dependencies
       if: runner.os == 'Linux'
-      run: sudo apt-get update && sudo apt-get install -y cmake build-essential libspdlog-dev libasio-dev libudev-dev
+      run: sudo apt-get update && sudo apt-get install -y build-essential libspdlog-dev libasio-dev libudev-dev
 
     - name: Install macos dependencies
       if: runner.os == 'macOS'
-      run: brew install cmake swig asio spdlog
-
-    - name: Setup python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+      run: brew install asio spdlog
 
     - name: Install windows dependencies
       if: runner.os == 'Windows'
@@ -57,14 +48,16 @@ jobs:
         VCPKG_ROOT: C:\vcpkg
       run: |
         echo "VCPKG_ROOT=${{ env.VCPKG_ROOT }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-        choco install cmake swig
         vcpkg install --triplet x64-windows asio spdlog
 
-    - name: toxify
-      working-directory: pc-ble-driver
-      run: |
-         python -m pip install scikit-build tox
-         tox -e ${{ matrix.toxpy }}
+    - name: Setup python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Python dependencies
+      working-directory: pc-ble-driver-py
+      run: python -m pip install -r requirements-dev.txt
 
     - name: Compile pc-ble-driver
       if: runner.os != 'Windows'
@@ -90,7 +83,7 @@ jobs:
         python setup.py bdist_wheel --build-type Release
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: pc_ble_driver_py-${{ matrix.os }}-${{ matrix.toxpy}}
         path: "pc-ble-driver-py/dist/*.whl"
@@ -106,7 +99,7 @@ jobs:
       contents: write
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: dist
 
@@ -120,6 +113,6 @@ jobs:
           ls -R
 
       - name: upload release assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: dist/*
